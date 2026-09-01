@@ -50,24 +50,39 @@
 }
 
 * { box-sizing: border-box; }
-/* Glatko skrolovanje (native browser feature, bez custom JS-a).
-   Izmereno Playwright profilisanjem (rAF frame-timing tokom skrola): sajt
-   renderuje čisto na ~60fps (16.7ms/frejm) čak i sa SVIM animacijama i
-   tranzicijama na strani ugašenim — dakle CSS/JS na sajtu ne izaziva pravi
-   "jank"/pad frejmova. To znači da "loše skrolovanje" nije bio problem u
-   performansama, vec u tome sto je skrol bio bez ikakvog uglađivanja:
-   obican tocak miša na Windows-u pomera stranicu u fiksnim "skokovima"
-   (nema inerciju kao touchpad), sto deluje trzavo/"neglatko" — tačno ono
-   sto je originalno i trazeno da se reši. "scroll-behavior: smooth" je
-   standardni, ugradjeni nacin da se to reši (GPU/compositor, bez JS-a),
-   i bezbedniji je od custom rAF/wheel-hijack resenja koje smo prethodno
-   probali i uklonili (ono je "otimalo" wheel event i sudaralo se sa
-   prirodnom inercijom touchpad-a). */
-html {
-  scroll-behavior: smooth;
+/* Glatko skrolovanje — NAPOMENA (treci pokusaj, ovoga puta izmereno realnim
+   pokretima točkića miša, ne samo sintetickim testom):
+   1) Uklonjen custom JS wheel-hijack — teorija da "kvari" skrol, ali samo
+      teorija, nije bila izmerena.
+   2) Uklonjen "scroll-behavior: smooth" — takodje teorija.
+   3) Playwright profilisanje (rAF frame-timing) je pokazalo da sajt
+      renderuje cisto na ~60fps, tj. CSS/JS ne izaziva pad frejmova.
+   4) Korisnik je poslao snimak ekrana stvarnog skrolovanja na uzivo
+      postavljenom sajtu — analiza snimka (frame-by-frame poredjenje
+      pozicije sadrzaja) je POKAZALA da skrol stvarno "skace" umesto da
+      klizi. Test sa simuliranim stvarnim "klikovima" tocka misa je
+      potvrdio zasto: "scroll-behavior: smooth" kod brzih uzastopnih
+      "klikova" tocka (svaki klik = novi cilj pre nego sto prethodna
+      animacija stigne da odigra) daje SKOKOVE od ~100px umesto glatkog
+      klizanja — dakle native "smooth" ovde ne pomaze kod pravog misa.
+   Resenje: Lenis (MIT, vendorovan lokalno u js/lenis.min.js) — standardna,
+   siroko koriscena biblioteka bas za ovaj problem (koristi je vecina
+   modernih "award" sajtova). Umesto da se oslanja na skok-po-klik
+   ponasanje browsera, akumulira ulaz i inicijalno ga izgladi
+   (requestAnimationFrame + lerp), pa i tocak misa i touchpad daju isti,
+   kontinuirani osecaj klizanja. Inicijalizacija je u js/main.js i
+   iskljucuje se automatski za prefers-reduced-motion. */
+html.lenis, html.lenis body {
+  min-height: auto;
 }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }
 
 body {

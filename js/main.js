@@ -6,6 +6,30 @@
 (function () {
   'use strict';
 
+  // --- 0. Glatko skrolovanje (Lenis) -----------------------------------
+  // Zamenjuje oslanjanje na "scroll-behavior: smooth" (koje kod brzih
+  // uzastopnih "klikova" tocka miša daje skokove umesto klizanja — vidi
+  // napomenu u style.css). Lenis izgladjuje ulaz iz tocka/touchpad-a kroz
+  // requestAnimationFrame, pa je pokret kontinuiran bez obzira na uredjaj.
+  // Iskljuceno za prefers-reduced-motion i ako biblioteka iz nekog razloga
+  // ne ucita se (npr. blokiran fajl) — tada ostaje obican, ispravan
+  // podrazumevani skrol brausera, nikad slomljen.
+  var reducedMotionQuery = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (typeof window.Lenis === 'function' && !(reducedMotionQuery && reducedMotionQuery.matches)) {
+    var lenis = new window.Lenis({
+      duration: 1.0,
+      easing: function (t) { return 1 - Math.pow(1 - t, 3); },
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1
+    });
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+  }
+
   // --- 1. Mobilni meni ------------------------------------------------
   var toggle = document.querySelector('.nav-toggle');
   var nav = document.querySelector('.main-nav');
