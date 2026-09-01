@@ -50,12 +50,25 @@
 }
 
 * { box-sizing: border-box; }
-/* NAPOMENA: "scroll-behavior: smooth" na <html> je namerno UKLONJENO.
-   Chrome/Edge tu vrednost primenjuju i na skrolovanje točkićem miša — svaki
-   "klik" točkića pokrece sopstvenu mini-animaciju, pa kod brzeg skrolovanja
-   te animacije pucaju jedna preko druge i skrol deluje "gumeno"/trzavo.
-   Bez ove linije skrol je instant i prati mis 1:1 (najbrza, najodazivnija
-   opcija, i ono sto vecina korisnika zapravo dozivljava kao "glatko"). */
+/* Glatko skrolovanje (native browser feature, bez custom JS-a).
+   Izmereno Playwright profilisanjem (rAF frame-timing tokom skrola): sajt
+   renderuje čisto na ~60fps (16.7ms/frejm) čak i sa SVIM animacijama i
+   tranzicijama na strani ugašenim — dakle CSS/JS na sajtu ne izaziva pravi
+   "jank"/pad frejmova. To znači da "loše skrolovanje" nije bio problem u
+   performansama, vec u tome sto je skrol bio bez ikakvog uglađivanja:
+   obican tocak miša na Windows-u pomera stranicu u fiksnim "skokovima"
+   (nema inerciju kao touchpad), sto deluje trzavo/"neglatko" — tačno ono
+   sto je originalno i trazeno da se reši. "scroll-behavior: smooth" je
+   standardni, ugradjeni nacin da se to reši (GPU/compositor, bez JS-a),
+   i bezbedniji je od custom rAF/wheel-hijack resenja koje smo prethodno
+   probali i uklonili (ono je "otimalo" wheel event i sudaralo se sa
+   prirodnom inercijom touchpad-a). */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 
 body {
   margin: 0;
