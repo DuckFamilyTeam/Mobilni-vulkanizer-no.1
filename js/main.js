@@ -1,6 +1,8 @@
 // Mobilni vulkanizer No1 — glavna skripta sajta
-// Samo tri stvari, bez biblioteka: hamburger meni, obelezavanje trenutne stranice
-// za tastaturu/citac ekrana je vec u HTML-u, i validacija kontakt forme.
+// Bez biblioteka: hamburger meni, senka zaglavlja pri skrolu, postepeno
+// pojavljivanje sadrzaja pri skrolu (progresivno poboljsanje, vidi nize)
+// i validacija kontakt forme. Obelezavanje trenutne stranice za tastaturu/
+// citac ekrana je vec resen u HTML-u (aria-current).
 (function () {
   'use strict';
 
@@ -25,7 +27,45 @@
     });
   }
 
-  // --- 2. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
+  // --- 2. Senka zaglavlja pri skrolovanju ------------------------------
+  var header = document.querySelector('.site-header');
+  if (header) {
+    var headerScrolled = false;
+    var updateHeaderShadow = function () {
+      var scrolled = window.scrollY > 8;
+      if (scrolled !== headerScrolled) {
+        header.classList.toggle('is-scrolled', scrolled);
+        headerScrolled = scrolled;
+      }
+    };
+    updateHeaderShadow();
+    window.addEventListener('scroll', updateHeaderShadow, { passive: true });
+  }
+
+  // --- 3. Postepeno pojavljivanje elemenata pri skrolovanju ------------
+  // Elementi su vidljivi po difoltu (vidi CSS); ovde ih tek privremeno
+  // sakrivamo pre nego sto ih pratimo, tako da bez JS-a ili bez podrske
+  // za IntersectionObserver ništa ne ostane trajno nevidljivo.
+  var revealEls = document.querySelectorAll('.reveal');
+  var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (revealEls.length && 'IntersectionObserver' in window && !prefersReducedMotion) {
+    Array.prototype.forEach.call(revealEls, function (el) {
+      el.classList.add('reveal-pending');
+    });
+    var revealObserver = new IntersectionObserver(function (entries, observer) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
+    Array.prototype.forEach.call(revealEls, function (el) {
+      revealObserver.observe(el);
+    });
+  }
+
+  // --- 4. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
   var form = document.querySelector('.contact-form');
   if (!form) { return; }
 
