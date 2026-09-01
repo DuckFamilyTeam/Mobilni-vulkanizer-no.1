@@ -50,10 +50,12 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-}
+/* NAPOMENA: "scroll-behavior: smooth" na <html> je namerno UKLONJENO.
+   Chrome/Edge tu vrednost primenjuju i na skrolovanje točkićem miša — svaki
+   "klik" točkića pokrece sopstvenu mini-animaciju, pa kod brzeg skrolovanja
+   te animacije pucaju jedna preko druge i skrol deluje "gumeno"/trzavo.
+   Bez ove linije skrol je instant i prati mis 1:1 (najbrza, najodazivnija
+   opcija, i ono sto vecina korisnika zapravo dozivljava kao "glatko"). */
 
 body {
   margin: 0;
