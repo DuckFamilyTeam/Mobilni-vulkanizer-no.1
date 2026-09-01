@@ -65,7 +65,92 @@
     });
   }
 
-  // --- 4. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
+  // --- 4. Brojac koji se "penje" pri ulasku brojke u prikaz ------------
+  // Ako nesto krene po zlu (nema IS podrske i sl.), tekst ostaje na
+  // originalnoj, vec ispravnoj vrednosti iz HTML-a (npr. "~30 min").
+  var countEls = document.querySelectorAll('[data-count]');
+  if (countEls.length && 'IntersectionObserver' in window && !prefersReducedMotion) {
+    var countObserver = new IntersectionObserver(function (entries, observer) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) { return; }
+        observer.unobserve(entry.target);
+        var el = entry.target;
+        var target = parseInt(el.getAttribute('data-count'), 10);
+        if (isNaN(target)) { return; }
+        var prefix = el.getAttribute('data-prefix') || '';
+        var suffix = el.getAttribute('data-suffix') || '';
+        var duration = 1200;
+        var startTime = null;
+        function tick(ts) {
+          if (startTime === null) { startTime = ts; }
+          var progress = Math.min((ts - startTime) / duration, 1);
+          var eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = prefix + Math.round(eased * target) + suffix;
+          if (progress < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            el.textContent = prefix + target + suffix;
+          }
+        }
+        requestAnimationFrame(tick);
+      });
+    }, { threshold: 0.4 });
+    Array.prototype.forEach.call(countEls, function (el) { countObserver.observe(el); });
+  }
+
+  // --- 5. Blago "meko" skrolovanje tockom miša ---------------------------
+  // Samo na desktopu (fin pokazivac + hover), i samo ako korisnik nije
+  // trazio manje pokreta. Native skrolovanje (tastatura, dodir, scroll bar)
+  // ostaje potpuno netaknuto — ne diramo DOM strukturu niti sprecavamo
+  // fokus/find-in-page, samo umeksavamo skrol tockom.
+  if (!prefersReducedMotion && window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    var smoothTarget = window.scrollY;
+    var smoothCurrent = window.scrollY;
+    var smoothRunning = false;
+
+    function maxScroll() {
+      return document.documentElement.scrollHeight - window.innerHeight;
+    }
+
+    // behavior: 'auto' je namerno — CSS "scroll-behavior: smooth" (html {...})
+    // bi inace svaki poziv scrollTo() sam animirao, pa bi se sudarao sa ovom
+    // (mnogo cescom) rucnom animacijom i pravio trzaje. Ovde mi kontrolisemo
+    // celu putanju, frejm po frejm.
+    function smoothTick() {
+      smoothCurrent += (smoothTarget - smoothCurrent) * 0.14;
+      if (Math.abs(smoothTarget - smoothCurrent) < 0.5) {
+        smoothCurrent = smoothTarget;
+        window.scrollTo({ top: smoothCurrent, left: 0, behavior: 'auto' });
+        smoothRunning = false;
+        return;
+      }
+      window.scrollTo({ top: smoothCurrent, left: 0, behavior: 'auto' });
+      requestAnimationFrame(smoothTick);
+    }
+
+    window.addEventListener('wheel', function (e) {
+      // Ctrl+tocak je zumiranje stranice u vecini browsera — ne diramo ga.
+      if (e.ctrlKey) { return; }
+      smoothTarget += e.deltaY;
+      smoothTarget = Math.max(0, Math.min(smoothTarget, maxScroll()));
+      e.preventDefault();
+      if (!smoothRunning) {
+        smoothRunning = true;
+        requestAnimationFrame(smoothTick);
+      }
+    }, { passive: false });
+
+    // Ako korisnik skroluje tastaturom ili prevlacenjem trake, sinhronizuj cilj
+    // da sledeci pokret tocka ne "trzne" nazad na staru poziciju.
+    window.addEventListener('scroll', function () {
+      if (!smoothRunning) {
+        smoothTarget = window.scrollY;
+        smoothCurrent = window.scrollY;
+      }
+    }, { passive: true });
+  }
+
+  // --- 6. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
   var form = document.querySelector('.contact-form');
   if (!form) { return; }
 
