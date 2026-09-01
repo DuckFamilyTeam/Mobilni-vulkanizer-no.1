@@ -98,59 +98,7 @@
     Array.prototype.forEach.call(countEls, function (el) { countObserver.observe(el); });
   }
 
-  // --- 5. Blago "meko" skrolovanje tockom miša ---------------------------
-  // Samo na desktopu (fin pokazivac + hover), i samo ako korisnik nije
-  // trazio manje pokreta. Native skrolovanje (tastatura, dodir, scroll bar)
-  // ostaje potpuno netaknuto — ne diramo DOM strukturu niti sprecavamo
-  // fokus/find-in-page, samo umeksavamo skrol tockom.
-  if (!prefersReducedMotion && window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    var smoothTarget = window.scrollY;
-    var smoothCurrent = window.scrollY;
-    var smoothRunning = false;
-
-    function maxScroll() {
-      return document.documentElement.scrollHeight - window.innerHeight;
-    }
-
-    // behavior: 'auto' je namerno — CSS "scroll-behavior: smooth" (html {...})
-    // bi inace svaki poziv scrollTo() sam animirao, pa bi se sudarao sa ovom
-    // (mnogo cescom) rucnom animacijom i pravio trzaje. Ovde mi kontrolisemo
-    // celu putanju, frejm po frejm.
-    function smoothTick() {
-      smoothCurrent += (smoothTarget - smoothCurrent) * 0.14;
-      if (Math.abs(smoothTarget - smoothCurrent) < 0.5) {
-        smoothCurrent = smoothTarget;
-        window.scrollTo({ top: smoothCurrent, left: 0, behavior: 'auto' });
-        smoothRunning = false;
-        return;
-      }
-      window.scrollTo({ top: smoothCurrent, left: 0, behavior: 'auto' });
-      requestAnimationFrame(smoothTick);
-    }
-
-    window.addEventListener('wheel', function (e) {
-      // Ctrl+tocak je zumiranje stranice u vecini browsera — ne diramo ga.
-      if (e.ctrlKey) { return; }
-      smoothTarget += e.deltaY;
-      smoothTarget = Math.max(0, Math.min(smoothTarget, maxScroll()));
-      e.preventDefault();
-      if (!smoothRunning) {
-        smoothRunning = true;
-        requestAnimationFrame(smoothTick);
-      }
-    }, { passive: false });
-
-    // Ako korisnik skroluje tastaturom ili prevlacenjem trake, sinhronizuj cilj
-    // da sledeci pokret tocka ne "trzne" nazad na staru poziciju.
-    window.addEventListener('scroll', function () {
-      if (!smoothRunning) {
-        smoothTarget = window.scrollY;
-        smoothCurrent = window.scrollY;
-      }
-    }, { passive: true });
-  }
-
-  // --- 6. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
+  // --- 5. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
   var form = document.querySelector('.contact-form');
   if (!form) { return; }
 
