@@ -1,0 +1,116 @@
+// Mobilni vulkanizer No1 — glavna skripta sajta
+// Samo tri stvari, bez biblioteka: hamburger meni, obelezavanje trenutne stranice
+// za tastaturu/citac ekrana je vec u HTML-u, i validacija kontakt forme.
+(function () {
+  'use strict';
+
+  // --- 1. Mobilni meni ------------------------------------------------
+  var toggle = document.querySelector('.nav-toggle');
+  var nav = document.querySelector('.main-nav');
+
+  if (toggle && nav) {
+    toggle.addEventListener('click', function () {
+      var expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      nav.classList.toggle('is-open');
+    });
+
+    // Esc zatvara meni i vraca fokus na dugme
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+        nav.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.focus();
+      }
+    });
+  }
+
+  // --- 2. Vreme ucitavanja forme, za jednostavnu zastitu od botova ----
+  var form = document.querySelector('.contact-form');
+  if (!form) { return; }
+
+  var loadedAt = Date.now();
+
+  function setError(field, message) {
+    var wrap = field.closest('.field');
+    if (!wrap) { return; }
+    var errorEl = wrap.querySelector('.error-text');
+    wrap.classList.add('has-error');
+    if (errorEl) { errorEl.textContent = message; }
+    field.setAttribute('aria-invalid', 'true');
+  }
+
+  function clearError(field) {
+    var wrap = field.closest('.field');
+    if (!wrap) { return; }
+    wrap.classList.remove('has-error');
+    field.removeAttribute('aria-invalid');
+  }
+
+  function validateField(field) {
+    if (!field.hasAttribute('required')) { return true; }
+    var value = field.value.trim();
+    if (!value) {
+      setError(field, 'Ovo polje je obavezno.');
+      return false;
+    }
+    if (field.type === 'tel') {
+      var digits = value.replace(/[^0-9]/g, '');
+      if (digits.length < 8) {
+        setError(field, 'Unesite ispravan broj telefona.');
+        return false;
+      }
+    }
+    clearError(field);
+    return true;
+  }
+
+  // Validacija na blur, ne dok korisnik kuca — manje laznih gresaka.
+  Array.prototype.forEach.call(form.querySelectorAll('input[required], textarea[required]'), function (field) {
+    field.addEventListener('blur', function () { validateField(field); });
+  });
+
+  form.addEventListener('submit', function (e) {
+    var fields = form.querySelectorAll('input[required], textarea[required]');
+    var valid = true;
+    var firstInvalid = null;
+
+    Array.prototype.forEach.call(fields, function (field) {
+      if (!validateField(field)) {
+        valid = false;
+        if (!firstInvalid) { firstInvalid = field; }
+      }
+    });
+
+    // Honeypot: polje koje ljudi ne vide, botovi cesto popune.
+    var honeypot = form.querySelector('input[name="web"]');
+    if (honeypot && honeypot.value) {
+      e.preventDefault();
+      return;
+    }
+
+    // Minimalno vreme popunjavanja — bot koji salje odmah se odbacuje.
+    var elapsed = Date.now() - loadedAt;
+    if (elapsed < 3000) {
+      e.preventDefault();
+      showStatus('error', 'Forma je poslata prebrzo. Sacekajte trenutak i pokusajte ponovo.');
+      return;
+    }
+
+    if (!valid) {
+      e.preventDefault();
+      if (firstInvalid) { firstInvalid.focus(); }
+      showStatus('error', 'Proverite obelezena polja pre slanja.');
+    }
+    // Ako je sve ispravno, forma se salje ka action atributu (spoljni servis).
+  });
+
+  function showStatus(type, message) {
+    var status = form.querySelector('.form-status');
+    if (!status) { return; }
+    status.textContent = message;
+    status.classList.remove('is-success', 'is-error');
+    status.classList.add('is-visible', type === 'success' ? 'is-success' : 'is-error');
+    status.setAttribute('role', 'alert');
+  }
+})();

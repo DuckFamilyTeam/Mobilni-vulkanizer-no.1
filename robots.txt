@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /politika-privatnosti.html
+
+Sitemap: https://mobilnivulkanizerno1.rs/sitemap.xml
